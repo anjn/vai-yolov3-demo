@@ -1,0 +1,6 @@
+/bin
+*.so
+*.d
+*.a
+.python-version
+__pycache__

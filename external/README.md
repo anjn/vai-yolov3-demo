@@ -1,0 +1,6 @@
+- https://github.com/zeromq/libzmq
+- https://github.com/zeromq/cppzmq
+- https://github.com/msgpack/msgpack-c
+- https://github.com/jbeder/yaml-cpp
+- https://github.com/nsf/termbox
+- https://github.com/anjn/arg
