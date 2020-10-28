@@ -1,23 +1,23 @@
 #pragma once
 #include <opencv2/opencv.hpp>
 
-#include "inf_model_base.hpp"
+#include "server/inf_model_base.hpp"
 
-extern "C" {
-
-void free_bboxes(bbox *arr);
-
-int do_nms(float *arr, int cnt,
-	   int im_w, int im_h,
-	   int net_w, int net_h,
-	   int out_w, int out_h,
-	   int bboxplanes,
-	   int classes,
-	   float scoreThreshold, 
-	   float iouThreshold,
-	   int *numBoxes, bbox **bboxes);
-
-} // extern "C"
+// extern "C" {
+// 
+// void free_bboxes(bbox *arr);
+// 
+// int do_nms(float *arr, int cnt,
+// 	   int im_w, int im_h,
+// 	   int net_w, int net_h,
+// 	   int out_w, int out_h,
+// 	   int bboxplanes,
+// 	   int classes,
+// 	   float scoreThreshold, 
+// 	   float iouThreshold,
+// 	   int *numBoxes, bbox **bboxes);
+// 
+// } // extern "C"
 
 namespace mls {
 namespace yolo {
@@ -107,14 +107,14 @@ struct yolov3_model : public inf_model_base
     float iouThreshold = 0.3f;
     int numBoxes;
     bbox *bboxes;
-    do_nms(output.data(), output.size(), frame_w, frame_h, 608, 608,
-      out_w, out_h, anchor_boxes, classes, scoreThreshold, iouThreshold, &numBoxes, &bboxes);
+    //do_nms(output.data(), output.size(), frame_w, frame_h, 608, 608,
+    //  out_w, out_h, anchor_boxes, classes, scoreThreshold, iouThreshold, &numBoxes, &bboxes);
 
     for (int i=0; i<numBoxes; i++) {
       rep.yolov2.detections.push_back(bboxes[i]);
     }
 
-    free_bboxes(bboxes);
+    //free_bboxes(bboxes);
 
     // Release stream
     pe.push_stream_id(stream_id);

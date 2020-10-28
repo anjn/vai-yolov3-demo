@@ -10,11 +10,11 @@
 #include "msgpack.hpp"
 #include "zmq.hpp"
 
-#include "inf_message.hpp"
-#include "inf_monitor.hpp"
-#include "time_util.hpp"
+#include "server/inf_message.hpp"
+#include "server/inf_monitor.hpp"
+#include "utils/time_util.hpp"
 
-#include "yolo/yolov3_model.hpp"
+#include "server/yolo/yolov3_model.hpp"
 
 namespace demo {
 

@@ -45,7 +45,7 @@ struct inf_status
 
   int yolov3_count { 0 };
 
-  void update(const xdnn_event& ev) {
+  void update(const inf_event& ev) {
     for (const auto& p: ev.float_params) {
       //std::cout << "event: " << p.first << " = " << p.second << std::endl;
       if (p.first == "yolov3_latency") {

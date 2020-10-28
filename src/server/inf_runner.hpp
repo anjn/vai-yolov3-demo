@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "queue_mt.hpp"
-#include "inf_config.hpp"
+#include "utils/queue_mt.hpp"
+#include "server/inf_config.hpp"
 
 namespace demo {
   
@@ -73,7 +73,7 @@ class inf_runner
   queue_mt<int> stream_ids;
 
 public:
-  void init(const xdnn_config& conf)
+  void init(const inf_model_config& conf)
   {
     // Create buffers and streams
     for (int i=0; i<conf.num_streams; i++) {
@@ -94,7 +94,7 @@ public:
     stream_ids.push(stream_id);
   }
   
-  xdnn_inout& get_buffer(int stream_id) {
+  inf_inout& get_buffer(int stream_id) {
     return inouts[stream_id];
   }
 

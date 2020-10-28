@@ -4,7 +4,7 @@
 
 #include "msgpack.hpp"
 
-#include "yolo/yolov3_message.hpp"
+#include "server/yolo/yolov3_message.hpp"
 
 namespace demo {
 

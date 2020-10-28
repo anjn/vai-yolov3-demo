@@ -2,7 +2,7 @@
 #include "arg/arg.h"
 #include "yaml-cpp/yaml.h"
 
-#include "inf_server.hpp"
+#include "server/inf_server.hpp"
 
 std::vector<demo::inf_model_config> load_model_configs(const YAML::Node& node)
 {

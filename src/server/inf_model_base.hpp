@@ -1,5 +1,6 @@
 #pragma once
-#include "inf_message.hpp"
+
+#include "server/inf_message.hpp"
 
 namespace demo {
 

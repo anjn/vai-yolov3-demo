@@ -11,7 +11,7 @@
 #include "zmq.hpp"
 #include "msgpack.hpp"
 
-#include "xdnn_message.hpp"
+#include "inf_message.hpp"
 #include "queue_mt.hpp"
 #include "sorted_queue_mt.hpp"
 #include "time_util.hpp"
@@ -185,7 +185,7 @@ private:
       // Deserialize
       auto oh = msgpack::unpack(static_cast<const char*>(rep.data()), rep.size());
       auto o = oh.get();
-      mls::xdnn_reply rep_obj;
+      demo::inf_reply rep_obj;
       o.convert(rep_obj);
 
       // Put label text
