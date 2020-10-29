@@ -10,7 +10,7 @@ std::vector<demo::inf_model_config> load_model_configs(const YAML::Node& node)
 
   for (const auto& model: node)
   {
-    mls::inf_model_config conf;
+    demo::inf_model_config conf;
     const auto& params = model.second;
     conf.name = model.first.as<std::string>();
     conf.xmodel = params["xmodel"].as<std::string>();

@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "utils/queue_mt.hpp"
-#include "server/inf_config.hpp"
+#include "server/inf_model_config.hpp"
 
 namespace demo {
   

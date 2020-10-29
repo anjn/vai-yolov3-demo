@@ -54,7 +54,7 @@ public:
     // Register models
     for (auto& c: conf.model_confs) {
       if (c.name == "yolov3") {
-        models[ec.name] = std::make_unique<yolo::yolov3_model>(c);
+        models[c.name] = std::make_unique<yolo::yolov3_model>(c);
       }
     }
 

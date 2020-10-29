@@ -1,7 +1,9 @@
 #pragma once
 #include <opencv2/opencv.hpp>
 
+#include "server/inf_message.hpp"
 #include "server/inf_model_base.hpp"
+#include "server/inf_model_config.hpp"
 
 // extern "C" {
 // 
@@ -19,19 +21,19 @@
 // 
 // } // extern "C"
 
-namespace mls {
+namespace demo {
 namespace yolo {
 
 struct yolov3_model : public inf_model_base
 {
-  yolov3_model(const xdnn_config& conf)
+  yolov3_model(const inf_model_config& conf)
   : inf_model_base::inf_model_base(conf)
   {}
 
   void infer(inf_request& req, inf_reply& rep) override
   {
-    auto stream_id = pe.pop_stream_id();
-    auto& inout = pe.get_buffer(stream_id);
+    auto stream_id = runner.pop_stream_id();
+    auto& inout = runner.get_buffer(stream_id);
     auto& output = inout.buffers["output"];
 
     int frame_c = 4;
@@ -53,7 +55,7 @@ struct yolov3_model : public inf_model_base
     }
 
     // Submit inference
-    pe.execute(stream_id);
+    runner.execute(stream_id);
 
     // Postprocess
     const int anchor_boxes = 5;
@@ -111,13 +113,13 @@ struct yolov3_model : public inf_model_base
     //  out_w, out_h, anchor_boxes, classes, scoreThreshold, iouThreshold, &numBoxes, &bboxes);
 
     for (int i=0; i<numBoxes; i++) {
-      rep.yolov2.detections.push_back(bboxes[i]);
+      rep.yolov3.detections.push_back(bboxes[i]);
     }
 
     //free_bboxes(bboxes);
 
     // Release stream
-    pe.push_stream_id(stream_id);
+    runner.push_stream_id(stream_id);
   }
 
   float sigmoid(float v) const {

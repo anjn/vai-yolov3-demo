@@ -2,7 +2,7 @@
 set -ex
 
 CFLAGS="-std=c++14 -Iarg -Isrc"
-LIBS="-lrt -pthread"
+LIBS="-lrt -pthread -lstdc++"
 
 ## # ML Suite
 ## make -C ${MLSUITE_ROOT}/apps/yolo/nms
