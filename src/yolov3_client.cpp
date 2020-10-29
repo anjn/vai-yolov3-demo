@@ -3,7 +3,7 @@
 #include <GLFW/glfw3.h>
 
 #include "arg/arg.h"
-#include "yolov2_client.hpp"
+#include "client/yolov3_client.hpp"
 
 int main(int argc, char** argv)
 {
@@ -21,7 +21,7 @@ int main(int argc, char** argv)
   const int img_h = args.as<int>(2);
   const int img_c = 4;
 
-  yolov2_client client(server, img_w, img_h, img_c);
+  yolov3_client client(server, img_w, img_h, img_c);
   client.start(num_threads);
 
   // OpenGL Init
@@ -36,7 +36,7 @@ int main(int argc, char** argv)
   const int win_h = win_w * img_h / img_w;
 
   using namespace std::literals::string_literals;
-  auto window = glfwCreateWindow(win_w, win_h, ("YOLOv2 608x608"s).c_str(), NULL, NULL);
+  auto window = glfwCreateWindow(win_w, win_h, ("YOLOv3 416x416, 20 classes"s).c_str(), NULL, NULL);
   if (window == nullptr) {
     std::cerr << "Error" << std::endl;
     return 1;

@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 set -ex
 
-CFLAGS="-std=c++14 -Iarg -Isrc"
-LIBS="-lrt -pthread"
-LIBS="$LIBS -lxml2"
+CFLAGS="-std=c++17 -Iarg -Isrc"
+LIBS="-lrt -pthread -lstdc++ -ldl -lunwind"
+LIBS="-lxml2 $LIBS"
 
 # OpenCV
 CFLAGS="$CFLAGS $(pkg-config --cflags opencv)"
-LIBS="$LIBS $(pkg-config --libs opencv)"
+LIBS="$(pkg-config --libs opencv) $LIBS"
 
 # OpenGL
 CFLAGS="$CFLAGS $(pkg-config --cflags gl glew glfw3)"
-LIBS="$LIBS $(pkg-config --libs gl glew glfw3)"
+LIBS="$(pkg-config --libs gl glew glfw3) $LIBS"
 
 # zeromq
 ZMQ=external/zeromq-4.3.2
 CFLAGS="$CFLAGS -I$ZMQ/include"
-LIBS="$LIBS $ZMQ/src/.libs/libzmq.a"
+LIBS="$ZMQ/src/.libs/libzmq.a $LIBS"
 if [ ! -e $ZMQ/src/.libs/libzmq.a ] ; then
   pushd $ZMQ
   ./autogen.sh
@@ -28,7 +28,7 @@ fi
 # msgpack-c
 MSGPACK=external/msgpack-3.2.0
 CFLAGS="$CFLAGS -I$MSGPACK/include"
-LIBS="$LIBS $MSGPACK/build/libmsgpackc.a"
+LIBS="$MSGPACK/build/libmsgpackc.a $LIBS"
 if [ ! -e $MSGPACK/build/libmsgpackc.a ] ; then
   pushd $MSGPACK
   mkdir -p build
@@ -45,7 +45,7 @@ CFLAGS="$CFLAGS -Iexternal/arg-master"
 #CFLAGS="$CFLAGS -O3"
 CFLAGS="$CFLAGS -g"
 
-programs="yolov2_client opencv_size opencv_input"
+programs="yolov3_client opencv_size opencv_input"
 
 if [ $# -ge 1 ] ; then
   programs=$*

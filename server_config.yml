@@ -1,19 +1,18 @@
 address: tcp://*:5555
-num_threads: 16
+num_threads: 4
 
 models:
   yolov3:
     xmodel:  model/yolov3.xmodel
 
-    num_runners: 4
+    input_width: 416
+    input_height: 416
+
+    anchor_boxes: 3
+    classes: 20
+
+    biases: [10,13,16,30,33,23, 30,61,62,45,59,119, 116,90,156,198,373,326]
+    labels: [aeroplane, bicycle, bird, boat, bottle, bus, car, cat, chair, cow,
+             diningtable, dog, horse, motorbike, person, pottedplant, sheep, sofa, train, tvmonitor]
+
     num_streams: 8
-
-    inputs:
-      input:
-        layer: data
-        shape: [608, 608, 3]
-
-    outputs:
-      output:
-        layer: layer31-conv
-        shape: [19, 19, 425]

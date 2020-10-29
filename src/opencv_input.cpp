@@ -28,8 +28,8 @@ int main(int argc, char** argv)
   Mat frame;
   cap >> frame;
 
-  const int out_w = 608;
-  const int out_h = 608 * frame.rows / frame.cols;
+  const int out_w = 416;
+  const int out_h = 416 * frame.rows / frame.cols;
 
   cv::Mat out_c3(out_w, out_h, CV_8UC3);
   cv::Mat out_c4(out_w, out_h, CV_8UC4);

@@ -14,36 +14,7 @@ std::vector<demo::inf_model_config> load_model_configs(const YAML::Node& node)
     const auto& params = model.second;
     conf.name = model.first.as<std::string>();
     conf.xmodel = params["xmodel"].as<std::string>();
-    
-    conf.num_runners = params["num_runners"].as<int>();
     conf.num_streams = params["num_streams"].as<int>();
-
-    for (const auto& input: params["inputs"])
-    {
-      std::vector<int> shape;
-      for (const auto& s: input.second["shape"])
-      {
-        shape.push_back(s.as<int>());
-      }
-      conf.inputs[input.first.as<std::string>()] = {
-        input.second["layer"].as<std::string>(),
-        shape
-      };
-    }
-
-    for (const auto& output: params["outputs"])
-    {
-      std::vector<int> shape;
-      for (const auto& s: output.second["shape"])
-      {
-        shape.push_back(s.as<int>());
-      }
-      conf.outputs[output.first.as<std::string>()] = {
-        output.second["layer"].as<std::string>(),
-        shape
-      };
-    }
-
     confs.push_back(conf);
   }
 

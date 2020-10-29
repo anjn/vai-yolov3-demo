@@ -28,9 +28,8 @@ struct inf_server_config
 
 class inf_server
 {
-  // xDNN
   const inf_server_config& conf;
-  std::map<std::string, std::unique_ptr<inf_model_base>> models;
+  //std::map<std::string, std::unique_ptr<inf_model_base>> models;
 
   // Worker threads
   std::vector<std::thread> threads;
@@ -52,11 +51,11 @@ public:
   void start()
   {
     // Register models
-    for (auto& c: conf.model_confs) {
-      if (c.name == "yolov3") {
-        models[c.name] = std::make_unique<yolo::yolov3_model>(c);
-      }
-    }
+    //for (auto& c: conf.model_confs) {
+    //  if (c.name == "yolov3") {
+    //    models[c.name] = std::make_unique<yolo::yolov3_model>(c);
+    //  }
+    //}
 
     // Start worker threads
     std::cout << "Num worker threads: " << conf.num_threads << std::endl;
@@ -106,6 +105,8 @@ private:
     zmq::socket_t monitor(zmq_context, ZMQ_PUSH);
     monitor.connect("tcp://localhost:5558");
 
+    yolo::yolov3_model model(conf.model_confs[0]);
+
     while (true) {
       // Get request
       zmq::message_t req;
@@ -148,16 +149,16 @@ private:
 
       // Run
       for (auto& inf: req_obj.inferences) {
-        auto it = models.find(inf);
-        if (it != models.end()) {
-          auto& model = it->second;
+        //auto it = models.find(inf);
+        //if (it != models.end()) {
+        //  auto& model = it->second;
           stop_watch sw;
-          model->infer(req_obj, rep_obj);
+          model.infer(req_obj, rep_obj);
 
           inf_event ev;
-          ev.float_params[model->name + "_latency"] = float(sw.get_time_ns())/1e6;
+          ev.float_params[model.name + "_latency"] = float(sw.get_time_ns())/1e6;
           ev.send(monitor);
-        }
+        //}
       }
 
       // Serialize

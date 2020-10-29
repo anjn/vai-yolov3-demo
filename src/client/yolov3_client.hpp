@@ -11,12 +11,12 @@
 #include "zmq.hpp"
 #include "msgpack.hpp"
 
-#include "inf_message.hpp"
-#include "queue_mt.hpp"
-#include "sorted_queue_mt.hpp"
-#include "time_util.hpp"
+#include "server/inf_message.hpp"
+#include "utils/queue_mt.hpp"
+#include "utils/sorted_queue_mt.hpp"
+#include "utils/time_util.hpp"
 
-class yolov2_client
+class yolov3_client
 {
   struct task {
     int frame_index;
@@ -60,7 +60,7 @@ class yolov2_client
   int m_out_frame_index;
 
 public:
-  yolov2_client(const std::string& server_, int frame_w_, int img_h_, int frame_c_, int num_frames = 8):
+  yolov3_client(const std::string& server_, int frame_w_, int img_h_, int frame_c_, int num_frames = 8):
     frame_w(frame_w_), frame_h(img_h_), frame_c(frame_c_),
     detect_tasks(8), output_tasks(8),
     server(server_), zmq_context(1),
@@ -108,7 +108,7 @@ public:
   {
     // Load class names
     {
-      std::ifstream ifs("data/coco.names");
+      std::ifstream ifs("data/voc_names.txt");
       std::string line;
       while (std::getline(ifs, line)) {
         class_names.push_back(line);
@@ -127,7 +127,7 @@ public:
     }
   
     for (int i=0; i<num_threads; i++) {
-      threads.emplace_back(&yolov2_client::detect, this);
+      threads.emplace_back(&yolov3_client::detect, this);
     }
   }
 
@@ -172,7 +172,7 @@ private:
       p.pack(frame_h);
       p.pack(frames[t.frame_id]);
       p.pack_array(1);
-      p.pack("yolov2");
+      p.pack("yolov3");
 
       // Send request
       zmq::message_t req(ss.str());
@@ -190,7 +190,7 @@ private:
 
       // Put label text
       cv::Mat mat(frame_h, frame_w, CV_8UC4, get_frame_ptr(t.frame_id));
-      for (auto& b : rep_obj.yolov2.detections) {
+      for (auto& b : rep_obj.yolov3.detections) {
         auto color = class_colors[b.classid];
         auto text = class_names[b.classid];
         auto box_color = cv::Scalar(color[0], color[1], color[2], 255);
