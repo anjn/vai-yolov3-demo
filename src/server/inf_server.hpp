@@ -12,6 +12,7 @@
 
 #include "server/inf_message.hpp"
 #include "server/inf_monitor.hpp"
+#include "server/inf_dynamic_batching.hpp"
 #include "utils/queue_mt.hpp"
 #include "utils/time_util.hpp"
 
@@ -82,7 +83,8 @@ public:
     inf_monitor monitor;
     auto monitor_th = std::thread(&inf_monitor::monitor, &monitor);
 
-    zmq::proxy(clients, workers);
+    //zmq::proxy(clients, workers);
+    dynamic_batching(clients, workers, 3, 200);
   }
 
   void stop() {
@@ -111,62 +113,67 @@ private:
     monitor.connect("tcp://localhost:5558");
 
     while (true) {
-      // Get request
-      zmq::message_t req;
-      socket.recv(req);
+      // Batch
+      std::vector<inf_request> req_batch;
 
-      // Deserialize
-      inf_request req_obj;
-
-      auto oh = msgpack::unpack(static_cast<const char*>(req.data()), req.size());
-      auto o = oh.get();
-
-      try
-      {
-        msgpack::type::tuple<int, int, std::vector<uint8_t>,
-          std::vector<std::string>> tmp;
-        o.convert(tmp);
+      while (true) {
+        // Get request
+        zmq::message_t req;
+        int more;
+        socket.recv(req);
+        size_t more_size = sizeof(more);
+        socket.getsockopt(ZMQ_RCVMORE, &more, &more_size);
   
-        req_obj.image_w = tmp.get<0>();
-        req_obj.image_h = tmp.get<1>();
-        req_obj.image = std::move(tmp.get<2>());
-        req_obj.inferences = std::move(tmp.get<3>());
-      }
-      catch (...)
-      {
-        // For Python clients
-        msgpack::type::tuple<int, int, std::vector<int>,
-          std::vector<std::string>> tmp;
-        o.convert(tmp);
+        // Deserialize
+        inf_request req_obj;
+        auto oh = msgpack::unpack(static_cast<const char*>(req.data()), req.size());
+        auto o = oh.get();
+  
+        try
+        {
+          msgpack::type::tuple<int, int, std::vector<uint8_t>,
+            std::vector<std::string>> tmp;
+          o.convert(tmp);
+    
+          req_obj.image_w = tmp.get<0>();
+          req_obj.image_h = tmp.get<1>();
+          req_obj.image = std::move(tmp.get<2>());
+          req_obj.inferences = std::move(tmp.get<3>());
+        }
+        catch (...)
+        {
+          // For Python clients
+          msgpack::type::tuple<int, int, std::vector<int>,
+            std::vector<std::string>> tmp;
+          o.convert(tmp);
+  
+          req_obj.image_w = tmp.get<0>();
+          req_obj.image_h = tmp.get<1>();
+          auto& arr = tmp.get<2>();
+          auto size = arr.size();
+          req_obj.image.resize(size);
+          for (int i=0; i<size; i++) req_obj.image[i] = arr[i];
+          req_obj.inferences = tmp.get<3>();
+        }
 
-        req_obj.image_w = tmp.get<0>();
-        req_obj.image_h = tmp.get<1>();
-        auto& arr = tmp.get<2>();
-        auto size = arr.size();
-        req_obj.image.resize(size);
-        for (int i=0; i<size; i++) req_obj.image[i] = arr[i];
-        req_obj.inferences = tmp.get<3>();
+        req_batch.push_back(req_obj);
+
+        if (!more) break;
       }
 
-      inf_reply rep_obj;
+      std::vector<inf_reply> rep_batch;
 
       // Run
-      for (auto& inf: req_obj.inferences) {
-        //auto it = models.find(inf);
-        //if (it != models.end()) {
-        //  auto& model = it->second;
-          stop_watch sw;
-          model->infer(req_obj, rep_obj);
+      stop_watch sw;
+      model->infer(req_batch, rep_batch);
 
-          inf_event ev;
-          ev.float_params[model->name + "_latency"] = float(sw.get_time_ns())/1e6;
-          ev.send(monitor);
-        //}
-      }
+      inf_event ev;
+      ev.float_params[model->name + "_latency"] = float(sw.get_time_ns())/1e6;
+      ev.send(monitor);
 
       // Serialize
       std::stringstream ss;
-      msgpack::pack(ss, rep_obj);
+      msgpack::pack(ss, rep_batch[0]);
 
       // Send reply
       zmq::message_t rep(ss.str());

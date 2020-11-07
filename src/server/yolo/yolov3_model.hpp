@@ -50,107 +50,117 @@ struct yolov3_model : public inf_model_base
     //labels = {"car","person","cycle"};
   }
 
-  void infer(inf_request& req, inf_reply& rep) override
+  void infer(std::vector<inf_request>& reqs, std::vector<inf_reply>& reps) override
   {
     const int frame_c = 4;
-    const auto frame_w = req.image_w;
-    const auto frame_h = req.image_h;
-    const auto frame_ptr = req.image.data();
+    const auto frame_w = reqs[0].image_w;
+    const auto frame_h = reqs[0].image_h;
+
+    const int batch = reqs.size();
 
     // Preprocess
-    if (frame_w == input_width) {
-      preprocess_input(frame_ptr, frame_w, frame_h, frame_c, buf.buffers["input0"].data());
-      preprocess_input(frame_ptr, frame_w, frame_h, frame_c, buf.buffers["input0"].data() + input_width * input_height * 3);
-      preprocess_input(frame_ptr, frame_w, frame_h, frame_c, buf.buffers["input0"].data() + input_width * input_height * 3 * 2);
-    } else {
-      assert(false);
-      // Resize
-      int img_w = input_width;
-      int img_h = std::min(input_width * frame_h / frame_w, input_height);
-      cv::Mat src(frame_w, frame_h, CV_8UC4, frame_ptr);
-      cv::Mat dst(img_w, img_h, CV_8UC4);
-      cv::resize(src, dst, cv::Size(img_w, img_h));
-      preprocess_input(dst.data, img_w, img_h, frame_c, buf.buffers["input0"].data());
-    }
+    for (int i=0; i<batch; i++) {
+      const auto frame_ptr = reqs[i].image.data();
 
+      if (frame_w == input_width) {
+        preprocess_input(frame_ptr, frame_w, frame_h, frame_c, buf.buffers["input0"].data() + input_width * input_height * 3 * i);
+      } else {
+        assert(false);
+        // Resize
+        int img_w = input_width;
+        int img_h = std::min(input_width * frame_h / frame_w, input_height);
+        cv::Mat src(frame_w, frame_h, CV_8UC4, frame_ptr);
+        cv::Mat dst(img_w, img_h, CV_8UC4);
+        cv::resize(src, dst, cv::Size(img_w, img_h));
+        preprocess_input(dst.data, img_w, img_h, frame_c, buf.buffers["input0"].data() + input_width * input_height * 3 * i);
+      }
+    }
+    
     // Submit inference
     execute();
 
+    reps.resize(batch);
+
     // Postprocess
-    std::vector<std::vector<float>> boxes;
-    std::vector<int> scale_feature;
+    for (int bi=0; bi<batch; bi++) {
+      auto& rep = reps[bi];
 
-    for (auto s: buf.output_shapes) scale_feature.push_back(s[2]);
-    std::sort(scale_feature.begin(), scale_feature.end(), [](int a, int b){return a < b;});
+      std::vector<std::vector<float>> boxes;
+      std::vector<int> scale_feature;
 
-    const int num_outputs = buf.output_ptrs.size();
+      for (auto s: buf.output_shapes) scale_feature.push_back(s[2]);
+      std::sort(scale_feature.begin(), scale_feature.end(), [](int a, int b){return a < b;});
 
-    for (auto i = 0; i < num_outputs; i++) {
-      const auto result = buf.output_raw_buffers[i];
-      const auto shape = buf.output_shapes[i];
-      const int height = shape[1];
-      const int width = shape[2];
-      const int channles = shape[3];
+      const int num_outputs = buf.output_ptrs.size();
 
-      int index = 0;
-      for (int j = 0; j < num_outputs; j++) {
-        if (width == scale_feature[j]) {
-          index = j;
-          break;
+      for (auto i = 0; i < num_outputs; i++) {
+        const auto result = buf.output_raw_buffers[i];
+        const auto shape = buf.output_shapes[i];
+        const int height = shape[1];
+        const int width = shape[2];
+        const int channles = shape[3];
+
+        int index = 0;
+        for (int j = 0; j < num_outputs; j++) {
+          if (width == scale_feature[j]) {
+            index = j;
+            break;
+          }
         }
-      }
 
-      //std::cout << "output width " << width << ", index " << index << std::endl;
+        //std::cout << "output width " << width << ", index " << index << std::endl;
 
-      // swap the network's result to a new sequence
-      const int conf_box = 5 + classes;
-      float swap[height][width][anchor_boxes][conf_box];
-      for (int y = 0; y < height; y++)
-        for (int x = 0; x < width; x++)
-          for (int c = 0 ; c < channles; c++)
-            swap[y][x][c/conf_box][c%conf_box] = result[height * width * channles * 2 + y * width * channles + x * channles + c];
+        // swap the network's result to a new sequence
+        const int conf_box = 5 + classes;
+        float swap[height][width][anchor_boxes][conf_box];
+        for (int y = 0; y < height; y++)
+          for (int x = 0; x < width; x++)
+            for (int c = 0 ; c < channles; c++)
+              swap[y][x][c/conf_box][c%conf_box] = 
+                result[height * width * channles * bi + y * width * channles + x * channles + c];
 
-      // compute the coordinate of each primary box
-      for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-          for (int a = 0 ; a < anchor_boxes; a++) {
-            float obj_score = sigmoid(swap[y][x][a][4]);
-            if(obj_score < confidence)
-              continue;
+        // compute the coordinate of each primary box
+        for (int y = 0; y < height; y++) {
+          for (int x = 0; x < width; x++) {
+            for (int a = 0 ; a < anchor_boxes; a++) {
+              float obj_score = sigmoid(swap[y][x][a][4]);
+              if(obj_score < confidence)
+                continue;
 
-            std::vector<float> box;
-            float xx = (x + sigmoid(swap[y][x][a][0])) / width;
-            float yy = (y + sigmoid(swap[y][x][a][1])) / height;
-            float ww = exp(swap[y][x][a][2]) * biases.at((anchor_boxes * index + a) * 2 + 0) / input_width;
-            float hh = exp(swap[y][x][a][3]) * biases.at((anchor_boxes * index + a) * 2 + 1) / input_height;
-            box.push_back(xx);
-            box.push_back(yy);
-            box.push_back(ww);
-            box.push_back(hh);
-            box.push_back(-1);
-            box.push_back(obj_score);
-            for(int p =0; p < classes; p++)
-              box.push_back(obj_score * sigmoid(swap[y][x][a][5 + p]));
-            boxes.push_back(box);
+              std::vector<float> box;
+              float xx = (x + sigmoid(swap[y][x][a][0])) / width;
+              float yy = (y + sigmoid(swap[y][x][a][1])) / height;
+              float ww = exp(swap[y][x][a][2]) * biases.at((anchor_boxes * index + a) * 2 + 0) / input_width;
+              float hh = exp(swap[y][x][a][3]) * biases.at((anchor_boxes * index + a) * 2 + 1) / input_height;
+              box.push_back(xx);
+              box.push_back(yy);
+              box.push_back(ww);
+              box.push_back(hh);
+              box.push_back(-1);
+              box.push_back(obj_score);
+              for(int p =0; p < classes; p++)
+                box.push_back(obj_score * sigmoid(swap[y][x][a][5 + p]));
+              boxes.push_back(box);
+            }
           }
         }
       }
-    }
 
-    boxes = correct_region_boxes(boxes, boxes.size(), frame_w, frame_h, input_width, input_height);
+      boxes = correct_region_boxes(boxes, boxes.size(), frame_w, frame_h, input_width, input_height);
 
-    vector<vector<float>> res = apply_nms(boxes, classes, 0.3);
+      vector<vector<float>> res = apply_nms(boxes, classes, 0.3);
 
-    for (auto& r: res) {
-      bbox b;
-      b.xlo = std::min(frame_w-1, std::max(0, (int) ((r[0] - r[2] / 2.0) * frame_w)));
-      b.ylo = std::min(frame_h-1, std::max(0, (int) ((r[1] - r[3] / 2.0) * frame_h)));
-      b.xhi = std::min(frame_w-1, std::max(0, (int) ((r[0] + r[2] / 2.0) * frame_w)));
-      b.yhi = std::min(frame_h-1, std::max(0, (int) ((r[1] + r[3] / 2.0) * frame_h)));
-      b.classid = r[4];
-      b.prob = r[6 + b.classid];
+      for (auto& r: res) {
+        bbox b;
+        b.xlo = std::min(frame_w-1, std::max(0, (int) ((r[0] - r[2] / 2.0) * frame_w)));
+        b.ylo = std::min(frame_h-1, std::max(0, (int) ((r[1] - r[3] / 2.0) * frame_h)));
+        b.xhi = std::min(frame_w-1, std::max(0, (int) ((r[0] + r[2] / 2.0) * frame_w)));
+        b.yhi = std::min(frame_h-1, std::max(0, (int) ((r[1] + r[3] / 2.0) * frame_h)));
+        b.classid = r[4];
+        b.prob = r[6 + b.classid];
 
-      rep.yolov3.detections.push_back(b);
+        rep.yolov3.detections.push_back(b);
+      }
     }
   }
 

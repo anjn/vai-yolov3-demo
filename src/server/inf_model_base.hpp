@@ -21,7 +21,7 @@ struct inf_model_base
     buf = inf_buffer(dpu_runner.get());
   }
 
-  virtual void infer(inf_request& req, inf_reply& rep) = 0;
+  virtual void infer(std::vector<inf_request>& reqs, std::vector<inf_reply>& reps) = 0;
 
   void execute() {
     auto job_id = dpu_runner->execute_async(buf.input_ptrs, buf.output_ptrs);

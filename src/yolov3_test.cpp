@@ -52,13 +52,13 @@ int main(int argc, char** argv)
   }
 
   auto t = [&](std::shared_ptr<demo::yolo::yolov3_model> m, int id) {
-    auto req2 = req;
-    auto rep2 = rep;
+    std::vector<demo::inf_request> req2 { req };
+    std::vector<demo::inf_reply> rep2 { rep };
     for (int i=0; i<num_tests; i++) {
       std::cout << id << " : " << i << std::endl;
       m->infer(req2, rep2);
     }
-    if (id == 0) rep = rep2;
+    if (id == 0) rep = rep2[0];
   };
 
   std::vector<std::thread> th;
