@@ -127,7 +127,7 @@ public:
     }
   
     for (int i=0; i<num_threads; i++) {
-      threads.emplace_back(&yolov3_client::detect, this);
+      threads.emplace_back(&yolov3_client::detect, this, i);
     }
   }
 
@@ -153,7 +153,7 @@ public:
 
 private:
   // Worker
-  void detect()
+  void detect(int worker_id)
   {
     std::cout << "Connect to " << server << std::endl;
 
@@ -175,12 +175,14 @@ private:
       p.pack("yolov3");
 
       // Send request
+      std::cout << "Worker " << worker_id << " : Send request" << std::endl;
       zmq::message_t req(ss.str());
       socket.send(req, zmq::send_flags::none);
       
       // Get reply
       zmq::message_t rep;
       socket.recv(rep);
+      std::cout << "Worker " << worker_id << " : Received reply" << std::endl;
 
       // Deserialize
       auto oh = msgpack::unpack(static_cast<const char*>(rep.data()), rep.size());

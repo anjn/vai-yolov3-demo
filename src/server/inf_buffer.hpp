@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include "utils/queue_mt.hpp"
+
 #include "/workspace/VART/samples/common/common.h"
 
 namespace demo {
@@ -16,6 +18,8 @@ struct inf_buffer {
   std::vector<vart::TensorBuffer*> input_ptrs, output_ptrs;
   std::vector<std::vector<int32_t>> input_shapes;
   std::vector<std::vector<int32_t>> output_shapes;
+
+  inf_buffer() {}
 
   inf_buffer(vart::Runner* runner)
   {
@@ -52,6 +56,38 @@ struct inf_buffer {
         index++;
       }
     }
+  }
+};
+
+class inf_buffer_pool
+{
+  std::vector<inf_buffer> buffers;
+  queue_mt<int> buffer_ids;
+
+public:
+  void init(int num_buffers, vart::Runner* runner)
+  {
+    // Create buffers and streams
+    for (int i=0; i<num_buffers; i++) {
+      buffers.emplace_back(runner);
+      buffer_ids.push(i);
+    }
+  }
+
+  int pop_id() {
+    return buffer_ids.pop();
+  }
+
+  void push_id(int id) {
+    buffer_ids.push(id);
+  }
+  
+  auto& get(int id) {
+    return buffers[id];
+  }
+
+  void stop() {
+    buffer_ids.stop();
   }
 };
 

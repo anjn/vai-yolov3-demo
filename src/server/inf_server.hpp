@@ -12,6 +12,7 @@
 
 #include "server/inf_message.hpp"
 #include "server/inf_monitor.hpp"
+#include "utils/queue_mt.hpp"
 #include "utils/time_util.hpp"
 
 #include "server/yolo/yolov3_model.hpp"
@@ -23,13 +24,16 @@ struct inf_server_config
   std::string xclbin;
   std::vector<inf_model_config> model_confs;
   std::string address;
-  int num_threads;
 };
 
 class inf_server
 {
+  std::map<std::string, std::unique_ptr<xir::Graph>> graphs;
+  std::map<std::string, std::vector<const xir::Subgraph*>> subgraphs;
+
   const inf_server_config& conf;
   //std::map<std::string, std::unique_ptr<inf_model_base>> models;
+  std::vector<std::shared_ptr<inf_model_base>> models;
 
   // Worker threads
   std::vector<std::thread> threads;
@@ -50,17 +54,18 @@ public:
 
   void start()
   {
-    // Register models
-    //for (auto& c: conf.model_confs) {
-    //  if (c.name == "yolov3") {
-    //    models[c.name] = std::make_unique<yolo::yolov3_model>(c);
-    //  }
-    //}
-
-    // Start worker threads
-    std::cout << "Num worker threads: " << conf.num_threads << std::endl;
-    for (int i=0; i<conf.num_threads; i++) {
-      threads.emplace_back(&inf_server::infer, this);
+    // Create models
+    for (auto& c: conf.model_confs) {
+      graphs[c.name] = xir::Graph::deserialize(c.xmodel);
+      subgraphs[c.name] = get_dpu_subgraph(graphs[c.name].get());
+      std::cout << "Num worker threads: " << c.num_workers << std::endl;
+      for (int i=0; i<c.num_workers; i++) {
+        if (c.name == "yolov3") {
+          auto model = std::make_shared<yolo::yolov3_model>(c, subgraphs[c.name][0]);
+          models.push_back(model);
+          threads.emplace_back(&inf_server::infer, this, model);
+        }
+      }
     }
 
     // Start server
@@ -96,7 +101,7 @@ public:
 private:
 
   // Worker
-  void infer()
+  void infer(std::shared_ptr<inf_model_base> model)
   {
     //std::cout << "Start worker thread" << std::endl;
     zmq::socket_t socket(zmq_context, ZMQ_REP);
@@ -104,8 +109,6 @@ private:
 
     zmq::socket_t monitor(zmq_context, ZMQ_PUSH);
     monitor.connect("tcp://localhost:5558");
-
-    yolo::yolov3_model model(conf.model_confs[0]);
 
     while (true) {
       // Get request
@@ -153,10 +156,10 @@ private:
         //if (it != models.end()) {
         //  auto& model = it->second;
           stop_watch sw;
-          model.infer(req_obj, rep_obj);
+          model->infer(req_obj, rep_obj);
 
           inf_event ev;
-          ev.float_params[model.name + "_latency"] = float(sw.get_time_ns())/1e6;
+          ev.float_params[model->name + "_latency"] = float(sw.get_time_ns())/1e6;
           ev.send(monitor);
         //}
       }

@@ -29,8 +29,8 @@ struct yolov3_model : public inf_model_base
   std::vector<float> biases;
   std::vector<std::string> labels;
 
-  yolov3_model(const inf_model_config& conf)
-  : inf_model_base::inf_model_base(conf)
+  yolov3_model(const inf_model_config& conf, const xir::Subgraph* subgraph)
+  : inf_model_base::inf_model_base(conf, subgraph)
   {
     biases = {
       116,90, 156,198, 373,326,
@@ -52,9 +52,6 @@ struct yolov3_model : public inf_model_base
 
   void infer(inf_request& req, inf_reply& rep) override
   {
-    auto stream_id = runner.pop_stream_id();
-    auto& inout = runner.get_buffer(stream_id);
-
     const int frame_c = 4;
     const auto frame_w = req.image_w;
     const auto frame_h = req.image_h;
@@ -62,9 +59,9 @@ struct yolov3_model : public inf_model_base
 
     // Preprocess
     if (frame_w == input_width) {
-      preprocess_input(frame_ptr, frame_w, frame_h, frame_c, inout.buffers["input0"].data());
-      preprocess_input(frame_ptr, frame_w, frame_h, frame_c, inout.buffers["input0"].data() + input_width * input_height * 3);
-      preprocess_input(frame_ptr, frame_w, frame_h, frame_c, inout.buffers["input0"].data() + input_width * input_height * 3 * 2);
+      preprocess_input(frame_ptr, frame_w, frame_h, frame_c, buf.buffers["input0"].data());
+      preprocess_input(frame_ptr, frame_w, frame_h, frame_c, buf.buffers["input0"].data() + input_width * input_height * 3);
+      preprocess_input(frame_ptr, frame_w, frame_h, frame_c, buf.buffers["input0"].data() + input_width * input_height * 3 * 2);
     } else {
       assert(false);
       // Resize
@@ -73,24 +70,24 @@ struct yolov3_model : public inf_model_base
       cv::Mat src(frame_w, frame_h, CV_8UC4, frame_ptr);
       cv::Mat dst(img_w, img_h, CV_8UC4);
       cv::resize(src, dst, cv::Size(img_w, img_h));
-      preprocess_input(dst.data, img_w, img_h, frame_c, inout.buffers["input0"].data());
+      preprocess_input(dst.data, img_w, img_h, frame_c, buf.buffers["input0"].data());
     }
 
     // Submit inference
-    runner.execute(stream_id);
+    execute();
 
     // Postprocess
     std::vector<std::vector<float>> boxes;
     std::vector<int> scale_feature;
 
-    for (auto s: inout.output_shapes) scale_feature.push_back(s[2]);
+    for (auto s: buf.output_shapes) scale_feature.push_back(s[2]);
     std::sort(scale_feature.begin(), scale_feature.end(), [](int a, int b){return a < b;});
 
-    const int num_outputs = inout.output_ptrs.size();
+    const int num_outputs = buf.output_ptrs.size();
 
     for (auto i = 0; i < num_outputs; i++) {
-      const auto result = inout.output_raw_buffers[i];
-      const auto shape = inout.output_shapes[i];
+      const auto result = buf.output_raw_buffers[i];
+      const auto shape = buf.output_shapes[i];
       const int height = shape[1];
       const int width = shape[2];
       const int channles = shape[3];
@@ -155,9 +152,6 @@ struct yolov3_model : public inf_model_base
 
       rep.yolov3.detections.push_back(b);
     }
-
-    // Release stream
-    runner.push_stream_id(stream_id);
   }
 
   inline float sigmoid(float v) const {

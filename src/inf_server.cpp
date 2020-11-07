@@ -1,3 +1,5 @@
+#include <boost/lockfree/queue.hpp>
+
 #include "msgpack.hpp"
 #include "arg/arg.h"
 #include "yaml-cpp/yaml.h"
@@ -14,7 +16,7 @@ std::vector<demo::inf_model_config> load_model_configs(const YAML::Node& node)
     const auto& params = model.second;
     conf.name = model.first.as<std::string>();
     conf.xmodel = params["xmodel"].as<std::string>();
-    conf.num_streams = params["num_streams"].as<int>();
+    conf.num_workers = params["num_workers"].as<int>();
     confs.push_back(conf);
   }
 
@@ -32,7 +34,6 @@ int main(int argc, char** argv)
 
   demo::inf_server_config server_conf;
   server_conf.address     = node["address"].as<std::string>();
-  server_conf.num_threads = node["num_threads"].as<int>();
   server_conf.model_confs = load_model_configs(node["models"]);
 
   demo::inf_server server(server_conf);

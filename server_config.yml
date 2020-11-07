@@ -1,8 +1,9 @@
 address: tcp://*:5555
-num_threads: 4
 
 models:
   yolov3:
+    num_workers: 4
+
     xmodel:  model/yolov3.xmodel
 
     input_width: 416
@@ -14,5 +15,3 @@ models:
     biases: [10,13,16,30,33,23, 30,61,62,45,59,119, 116,90,156,198,373,326]
     labels: [aeroplane, bicycle, bird, boat, bottle, bus, car, cat, chair, cow,
              diningtable, dog, horse, motorbike, person, pottedplant, sheep, sofa, train, tvmonitor]
-
-    num_streams: 8

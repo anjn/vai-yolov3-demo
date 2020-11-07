@@ -9,24 +9,32 @@ int main(int argc, char** argv)
 {
   // Parse arguments
   arg_begin("INPUT", 1, 1);
+  arg_i(num_tests, 1);
+  arg_i(num_threads, 1);
   arg_end;
 
   demo::inf_model_config conf;
   conf.name = "yolov3";
   conf.xmodel = "model/yolov3.xmodel";
   //conf.xmodel = "model/yolov3_adas_pruned_0_9.xmodel";
-  conf.num_runners = 1;
-  conf.num_streams = 1;
+  conf.num_workers = 1;
 
   demo::inf_request req;
   demo::inf_reply rep;
 
-  demo::yolo::yolov3_model model(conf);
+  auto graph = xir::Graph::deserialize(conf.xmodel);
+  auto subgraph = get_dpu_subgraph(graph.get());
+
+  std::vector<std::shared_ptr<demo::yolo::yolov3_model>> models;
+  for (int i=0; i<num_threads; i++) {
+    //models.emplace_back(conf, subgraph[0]);
+    models.push_back(std::make_shared<demo::yolo::yolov3_model>(conf, subgraph[0]));
+  }
 
   auto img = cv::imread(args[0]);
 
-    const int out_w = model.input_width;
-    const int out_h = std::min(model.input_width * img.rows / img.cols, model.input_height);
+  const int out_w = models[0]->input_width;
+  const int out_h = std::min(models[0]->input_width * img.rows / img.cols, models[0]->input_height);
   {
     //const int out_w = img.cols;
     //const int out_h = img.rows;
@@ -43,10 +51,26 @@ int main(int argc, char** argv)
     req.inferences.push_back("yolov3");
   }
 
-  model.infer(req, rep);
+  auto t = [&](std::shared_ptr<demo::yolo::yolov3_model> m, int id) {
+    auto req2 = req;
+    auto rep2 = rep;
+    for (int i=0; i<num_tests; i++) {
+      std::cout << id << " : " << i << std::endl;
+      m->infer(req2, rep2);
+    }
+    if (id == 0) rep = rep2;
+  };
+
+  std::vector<std::thread> th;
+  for (int i=0; i<num_threads; i++) {
+    th.emplace_back(t, models[i], i);
+  }
+
+  for (auto& tt: th)
+    tt.join();
 
   for (auto& b: rep.yolov3.detections) {
-    auto text = model.labels[b.classid];
+    auto text = models[0]->labels[b.classid];
     b.xlo = b.xlo * img.cols / out_w;
     b.xhi = b.xhi * img.cols / out_w;
     b.ylo = b.ylo * img.rows / out_h;
