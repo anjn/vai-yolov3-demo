@@ -34,7 +34,7 @@ int main(int argc, char** argv)
   auto img = cv::imread(args[0]);
 
   const int out_w = models[0]->input_width;
-  const int out_h = std::min(models[0]->input_width * img.rows / img.cols, models[0]->input_height);
+  const int out_h = std::min(out_w * img.rows / img.cols, models[0]->input_height);
   {
     //const int out_w = img.cols;
     //const int out_h = img.rows;

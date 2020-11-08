@@ -22,9 +22,10 @@ namespace demo {
 
 struct inf_server_config
 {
-  std::string xclbin;
-  std::vector<inf_model_config> model_confs;
   std::string address;
+  int max_batch_size;
+  int max_batch_latency;
+  std::vector<inf_model_config> model_confs;
 };
 
 class inf_server
@@ -64,7 +65,7 @@ public:
         if (c.name == "yolov3") {
           auto model = std::make_shared<yolo::yolov3_model>(c, subgraphs[c.name][0]);
           models.push_back(model);
-          threads.emplace_back(&inf_server::infer, this, model);
+          threads.emplace_back(&inf_server::infer, this, i, model);
         }
       }
     }
@@ -80,11 +81,11 @@ public:
     workers.bind("inproc://workers");
 
     // Start monitor
-    inf_monitor monitor;
-    auto monitor_th = std::thread(&inf_monitor::monitor, &monitor);
+    //inf_monitor monitor;
+    //auto monitor_th = std::thread(&inf_monitor::monitor, &monitor);
 
     //zmq::proxy(clients, workers);
-    dynamic_batching(clients, workers, 3, 200);
+    dynamic_batching(clients, workers, conf.max_batch_size, conf.max_batch_latency);
   }
 
   void stop() {
@@ -103,7 +104,7 @@ public:
 private:
 
   // Worker
-  void infer(std::shared_ptr<inf_model_base> model)
+  void infer(int worker_id, std::shared_ptr<inf_model_base> model)
   {
     //std::cout << "Start worker thread" << std::endl;
     zmq::socket_t socket(zmq_context, ZMQ_REP);
@@ -123,61 +124,37 @@ private:
         socket.recv(req);
         size_t more_size = sizeof(more);
         socket.getsockopt(ZMQ_RCVMORE, &more, &more_size);
+        //std::cout << "worker: recv, more = " << more << std::endl;
   
         // Deserialize
         inf_request req_obj;
-        auto oh = msgpack::unpack(static_cast<const char*>(req.data()), req.size());
-        auto o = oh.get();
-  
-        try
-        {
-          msgpack::type::tuple<int, int, std::vector<uint8_t>,
-            std::vector<std::string>> tmp;
-          o.convert(tmp);
-    
-          req_obj.image_w = tmp.get<0>();
-          req_obj.image_h = tmp.get<1>();
-          req_obj.image = std::move(tmp.get<2>());
-          req_obj.inferences = std::move(tmp.get<3>());
-        }
-        catch (...)
-        {
-          // For Python clients
-          msgpack::type::tuple<int, int, std::vector<int>,
-            std::vector<std::string>> tmp;
-          o.convert(tmp);
-  
-          req_obj.image_w = tmp.get<0>();
-          req_obj.image_h = tmp.get<1>();
-          auto& arr = tmp.get<2>();
-          auto size = arr.size();
-          req_obj.image.resize(size);
-          for (int i=0; i<size; i++) req_obj.image[i] = arr[i];
-          req_obj.inferences = tmp.get<3>();
-        }
-
+        req_obj.unpack(static_cast<const char*>(req.data()), req.size());
         req_batch.push_back(req_obj);
 
         if (!more) break;
       }
 
-      std::vector<inf_reply> rep_batch;
-
       // Run
       stop_watch sw;
+      std::vector<inf_reply> rep_batch;
       model->infer(req_batch, rep_batch);
+      std::cout << "Worker " << worker_id << " : inf, bs=" << req_batch.size() <<
+        ", latency=" << (sw.get_time_ns()/1e6) << std::endl;
 
       inf_event ev;
       ev.float_params[model->name + "_latency"] = float(sw.get_time_ns())/1e6;
       ev.send(monitor);
 
-      // Serialize
-      std::stringstream ss;
-      msgpack::pack(ss, rep_batch[0]);
+      for (auto i=0u; i<rep_batch.size(); i++) {
+        //std::cout << "worker: send, " << i << std::endl;
+        // Serialize
+        std::stringstream ss;
+        msgpack::pack(ss, rep_batch[i]);
 
-      // Send reply
-      zmq::message_t rep(ss.str());
-      socket.send(rep, zmq::send_flags::none);
+        // Send reply
+        zmq::message_t rep(ss.str());
+        socket.send(rep, i+1 < rep_batch.size() ? zmq::send_flags::sndmore : zmq::send_flags::none);
+      }
     }
   }
 

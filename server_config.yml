@@ -1,4 +1,6 @@
 address: tcp://*:5555
+max_batch_size: 3
+max_batch_latency: 80
 
 models:
   yolov3:

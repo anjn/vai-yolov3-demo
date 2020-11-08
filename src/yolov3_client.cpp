@@ -151,7 +151,9 @@ int main(int argc, char** argv)
       glfwSwapBuffers(window);
 
       client.push_frame_id(frame_id);
-      frame_id = -1;
+      frame_id = -1; 
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   
     // Check window close

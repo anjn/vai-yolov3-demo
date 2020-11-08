@@ -69,6 +69,7 @@ struct yolov3_model : public inf_model_base
         // Resize
         int img_w = input_width;
         int img_h = std::min(input_width * frame_h / frame_w, input_height);
+        std::cout << "Resize : from " << frame_w << "x" << frame_h << ", to " << img_w << "x" << img_h << std::endl;
         cv::Mat src(frame_w, frame_h, CV_8UC4, frame_ptr);
         cv::Mat dst(img_w, img_h, CV_8UC4);
         cv::resize(src, dst, cv::Size(img_w, img_h));

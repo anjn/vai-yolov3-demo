@@ -33,7 +33,9 @@ int main(int argc, char** argv)
   YAML::Node node = YAML::LoadFile("server_config.yml");
 
   demo::inf_server_config server_conf;
-  server_conf.address     = node["address"].as<std::string>();
+  server_conf.address = node["address"].as<std::string>();
+  server_conf.max_batch_size = node["max_batch_size"].as<int>();
+  server_conf.max_batch_latency = node["max_batch_latency"].as<int>();
   server_conf.model_confs = load_model_configs(node["models"]);
 
   demo::inf_server server(server_conf);
