@@ -12,7 +12,7 @@ Prepare model
 Login to Vitis-AI container
 
 Download YOLOv3 model
-$ wget https://www.xilinx.com/bin/public/openDownload?filename=dk_yolov3_voc_416_416_65.42G_1.2.zip
+$ wget https://www.xilinx.com/bin/public/openDownload?filename=dk_yolov3_voc_416_416_65.42G_1.2.zip -O dk_yolov3_voc_416_416_65.42G_1.2.zip
 
 Unzip
 $ unzip dk_yolov3_voc_416_416_65.42G_1.2.zip
