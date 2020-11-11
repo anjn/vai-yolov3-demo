@@ -58,7 +58,8 @@ CFLAGS="$CFLAGS -Iexternal/arg-master"
 #CFLAGS="$CFLAGS -O3"
 CFLAGS="$CFLAGS -g"
 
-programs="yolov3_client opencv_size opencv_input"
+programs="yolov3_client opencv_size opencv_input opencv_input_images"
+programs=${1-:$programs}
 
 if [ $# -ge 1 ] ; then
   programs=$*

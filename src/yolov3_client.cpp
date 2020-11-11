@@ -140,6 +140,7 @@ int main(int argc, char** argv)
       cv::Mat mat(img_h, img_w, CV_8UC4, frame);
       std::ostringstream oss;
       oss << "FPS: " << std::fixed << std::setprecision(2) << fps.get();
+      spdlog::debug("Display: FPS = {}", fps.get());
       cv::putText(mat, oss.str(), cv::Point(5,20), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0,255,0,255), 2);
       cv::flip(mat, mat, 0);
     
