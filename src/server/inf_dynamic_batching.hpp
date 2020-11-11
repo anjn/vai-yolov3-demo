@@ -30,7 +30,7 @@ static void dynamic_batching(
     return v;
   };
 
-  while (1) {
+  while (true) {
     zmq::poll(&items[0], 2, 1); // timeout = 1ms
 
     if (items[0].revents & ZMQ_POLLIN) {
@@ -88,11 +88,14 @@ static void dynamic_batching(
       assert(more(backend) != 0);
       assert(m.size() == sizeof(batch_id));
       uint64_t bi = *reinterpret_cast<uint64_t*>(m.data());
+      assert(batches.find(bi) != batches.end());
 
       // Empty
       backend.recv(m);
       assert(more(backend) != 0);
       assert(m.size() == 0);
+
+      //std::cout << "Batch: to frontend, bi=" << bi << ", bs=" << batches[bi].size() << ", " << batches.size() << std::endl;
 
       // Body
       for (auto& addr: batches[bi]) {

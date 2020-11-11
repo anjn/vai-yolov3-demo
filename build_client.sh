@@ -38,6 +38,19 @@ if [ ! -e $MSGPACK/build/libmsgpackc.a ] ; then
   popd
 fi
 
+# spdlog
+SPDLOG=external/spdlog-1.8.1
+CFLAGS="$CFLAGS -I$SPDLOG/include"
+LIBS="$SPDLOG/build/libspdlog.a $LIBS"
+if [ ! -e $SPDLOG/build/libspdlog.a ] ; then
+  pushd $SPDLOG
+  mkdir -p build
+  cd build
+  cmake ..
+  make -j8
+  popd
+fi
+
 # cppzmq, arg
 CFLAGS="$CFLAGS -Iexternal/cppzmq-4.4.1"
 CFLAGS="$CFLAGS -Iexternal/arg-master"

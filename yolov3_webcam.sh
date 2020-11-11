@@ -2,6 +2,8 @@
 
 set -ex
 
+source /opt/xilinx/xrt/setup.sh > /dev/null
+
 video=${1:-0}; shift
 
 eval $(./bin/opencv_size $video)

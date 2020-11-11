@@ -9,9 +9,9 @@
 
 #include "msgpack.hpp"
 #include "zmq.hpp"
+#include "spdlog/spdlog.h"
 
 #include "server/inf_message.hpp"
-#include "server/inf_monitor.hpp"
 #include "server/inf_dynamic_batching.hpp"
 #include "utils/queue_mt.hpp"
 #include "utils/time_util.hpp"
@@ -34,7 +34,6 @@ class inf_server
   std::map<std::string, std::vector<const xir::Subgraph*>> subgraphs;
 
   const inf_server_config& conf;
-  //std::map<std::string, std::unique_ptr<inf_model_base>> models;
   std::vector<std::shared_ptr<inf_model_base>> models;
 
   // Worker threads
@@ -44,14 +43,10 @@ class inf_server
   const std::string address;
   zmq::context_t zmq_context;
 
-  bool m_stop;
-  mutable std::mutex m_mutex;
-
 public:
   inf_server(const inf_server_config& conf_)
   : conf(conf_),
-    zmq_context(1),
-    m_stop(false)
+    zmq_context(1)
   {}
 
   void start()
@@ -80,25 +75,8 @@ public:
     zmq::socket_t workers(zmq_context, ZMQ_DEALER);
     workers.bind("inproc://workers");
 
-    // Start monitor
-    //inf_monitor monitor;
-    //auto monitor_th = std::thread(&inf_monitor::monitor, &monitor);
-
     //zmq::proxy(clients, workers);
     dynamic_batching(clients, workers, conf.max_batch_size, conf.max_batch_latency);
-  }
-
-  void stop() {
-    {
-      std::lock_guard<std::mutex> lk(m_mutex);
-      m_stop = true;
-    }
-    for (auto& th: threads) th.join();
-  }
-
-  bool stopped() const {
-    std::lock_guard<std::mutex> lk(m_mutex);
-    return m_stop;
   }
 
 private:
@@ -106,12 +84,8 @@ private:
   // Worker
   void infer(int worker_id, std::shared_ptr<inf_model_base> model)
   {
-    //std::cout << "Start worker thread" << std::endl;
     zmq::socket_t socket(zmq_context, ZMQ_REP);
     socket.connect("inproc://workers");
-
-    zmq::socket_t monitor(zmq_context, ZMQ_PUSH);
-    monitor.connect("tcp://localhost:5558");
 
     while (true) {
       // Batch
@@ -124,7 +98,6 @@ private:
         socket.recv(req);
         size_t more_size = sizeof(more);
         socket.getsockopt(ZMQ_RCVMORE, &more, &more_size);
-        //std::cout << "worker: recv, more = " << more << std::endl;
   
         // Deserialize
         inf_request req_obj;
@@ -137,16 +110,20 @@ private:
       // Run
       stop_watch sw;
       std::vector<inf_reply> rep_batch;
-      model->infer(req_batch, rep_batch);
-      std::cout << "Worker " << worker_id << " : inf, bs=" << req_batch.size() <<
-        ", latency=" << (sw.get_time_ns()/1e6) << std::endl;
+      //std::cout << "Worker " << worker_id << " : inf, bs=" << req_batch.size() << ", id=";
+      //for (auto& req: req_batch)
+      //  std::cout << req.id << ",";
+      //std::cout << std::endl;
 
-      inf_event ev;
-      ev.float_params[model->name + "_latency"] = float(sw.get_time_ns())/1e6;
-      ev.send(monitor);
+      model->infer(req_batch, rep_batch);
+
+      //std::cout << "Worker " << worker_id << " : inf, bs=" << rep_batch.size() <<
+      //  ", id=" << req_batch[0].id << ", latency=" << (sw.get_time_ns()/1e6) << std::endl;
 
       for (auto i=0u; i<rep_batch.size(); i++) {
-        //std::cout << "worker: send, " << i << std::endl;
+        // Copy ID
+        rep_batch[i].req_id = req_batch[i].id;
+
         // Serialize
         std::stringstream ss;
         msgpack::pack(ss, rep_batch[i]);

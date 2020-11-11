@@ -10,6 +10,7 @@
 
 #include "zmq.hpp"
 #include "msgpack.hpp"
+#include "spdlog/spdlog.h"
 
 #include "server/inf_message.hpp"
 #include "utils/queue_mt.hpp"
@@ -155,7 +156,7 @@ private:
   // Worker
   void detect(int worker_id)
   {
-    std::cout << "Connect to " << server << std::endl;
+    spdlog::info("Connect to {}", server);
 
     zmq::socket_t socket(zmq_context, ZMQ_REQ);
     socket.connect(server);
@@ -167,7 +168,9 @@ private:
       // Serialize
       std::stringstream ss;
       msgpack::packer<std::stringstream> p(ss);
-      p.pack_array(4);
+      p.pack_array(5);
+      uint64_t id = t.frame_index;
+      p.pack(id);
       p.pack(frame_w);
       p.pack(frame_h);
       p.pack(frames[t.frame_id]);
@@ -175,20 +178,21 @@ private:
       p.pack("yolov3");
 
       // Send request
-      std::cout << "Worker " << worker_id << " : Send request" << std::endl;
+      spdlog::debug("Worker {} : Send request, id = {}", worker_id, id);
       zmq::message_t req(ss.str());
       socket.send(req, zmq::send_flags::none);
       
       // Get reply
       zmq::message_t rep;
       socket.recv(rep);
-      std::cout << "Worker " << worker_id << " : Received reply" << std::endl;
 
       // Deserialize
       auto oh = msgpack::unpack(static_cast<const char*>(rep.data()), rep.size());
       auto o = oh.get();
       demo::inf_reply rep_obj;
       o.convert(rep_obj);
+      assert(rep_obj.req_id == id);
+      spdlog::debug("Worker {} : Received reply, id = {}", worker_id, id);
 
       // Put label text
       cv::Mat mat(frame_h, frame_w, CV_8UC4, get_frame_ptr(t.frame_id));

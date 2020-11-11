@@ -2,7 +2,9 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include "spdlog/spdlog.h"
 #include "arg/arg.h"
+
 #include "client/yolov3_client.hpp"
 
 int main(int argc, char** argv)
@@ -14,7 +16,11 @@ int main(int argc, char** argv)
   arg_i(window_width, -1, "Window width (default: same with video size)");
   arg_i(display_fps, 30, "Display frame per second");
   arg_b(normal, false, "Play at normal speed");
+  arg_b(debug, false, "Enable debug output");
   arg_end;
+
+  if (debug)
+    spdlog::set_level(spdlog::level::debug);
 
   const auto video_file = args[0];
   const int img_w = args.as<int>(1);
@@ -121,7 +127,7 @@ int main(int argc, char** argv)
       get_next_frame();
 
     // Get latest frame
-    while (!normal && client.output_task_size() > 0) {
+    while (!normal && client.output_task_size() > 3) {
       get_next_frame();
     }
 
@@ -136,7 +142,6 @@ int main(int argc, char** argv)
       oss << "FPS: " << std::fixed << std::setprecision(2) << fps.get();
       cv::putText(mat, oss.str(), cv::Point(5,20), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0,255,0,255), 2);
       cv::flip(mat, mat, 0);
-      //printf("fps: %.2lf\n", fps.get());
     
       // Draw frame to window
       glClear(GL_COLOR_BUFFER_BIT);

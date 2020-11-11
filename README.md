@@ -24,7 +24,7 @@ YOLOv3 client (C++)
 
 ```bash
 # Install required packages
-sudo apt install ffmpeg libopencv-dev libglew-dev libglfw3-dev libopenblas-dev libunwind-dev
+sudo apt install ffmpeg libopencv-dev libglew-dev libglfw3-dev libopenblas-dev libunwind-dev cmake
 
 # Build client
 ./build_client.sh

@@ -3,4 +3,5 @@
 - https://github.com/msgpack/msgpack-c
 - https://github.com/jbeder/yaml-cpp
 - https://github.com/nsf/termbox
+- https://github.com/gabime/spdlog
 - https://github.com/anjn/arg

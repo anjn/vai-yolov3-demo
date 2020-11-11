@@ -10,6 +10,7 @@ namespace demo {
 
 struct inf_request
 {
+  uint64_t id;
   int image_w;
   int image_h;
   std::vector<uint8_t> image;
@@ -21,39 +22,41 @@ struct inf_request
 
     try
     {
-      msgpack::type::tuple<int, int, std::vector<uint8_t>, std::vector<std::string>> tmp;
+      msgpack::type::tuple<uint64_t, int, int, std::vector<uint8_t>, std::vector<std::string>> tmp;
       o.convert(tmp);
 
-      image_w = tmp.get<0>();
-      image_h = tmp.get<1>();
-      image = std::move(tmp.get<2>());
-      inferences = std::move(tmp.get<3>());
+      id = tmp.get<0>();
+      image_w = tmp.get<1>();
+      image_h = tmp.get<2>();
+      image = std::move(tmp.get<3>());
+      inferences = std::move(tmp.get<4>());
     }
     catch (...)
     {
       // For Python clients
-      msgpack::type::tuple<int, int, std::vector<int>,
-        std::vector<std::string>> tmp;
+      msgpack::type::tuple<uint64_t, int, int, std::vector<int>, std::vector<std::string>> tmp;
       o.convert(tmp);
 
-      image_w = tmp.get<0>();
-      image_h = tmp.get<1>();
-      auto& arr = tmp.get<2>();
+      id = tmp.get<0>();
+      image_w = tmp.get<1>();
+      image_h = tmp.get<2>();
+      auto& arr = tmp.get<3>();
       auto size = arr.size();
       image.resize(size);
       for (int i=0; i<size; i++) image[i] = arr[i];
-      inferences = tmp.get<3>();
+      inferences = tmp.get<4>();
     }
   }
 
-  MSGPACK_DEFINE(image_w, image_h, image, inferences);
+  MSGPACK_DEFINE(id, image_w, image_h, image, inferences);
 };
 
 struct inf_reply
 {
+  uint64_t req_id;
   yolo::yolov3_reply yolov3;
 
-  MSGPACK_DEFINE(yolov3);
+  MSGPACK_DEFINE(req_id, yolov3);
 };
 
 struct inf_request_batch
