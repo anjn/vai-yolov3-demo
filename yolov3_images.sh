@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-#set -ex
-
 trap 'stty sane' SIGINT
+
+dir=$(dirname $(readlink -f $0))
+cd $dir
 
 source /opt/xilinx/xrt/setup.sh > /dev/null
 

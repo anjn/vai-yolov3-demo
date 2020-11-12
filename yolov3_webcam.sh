@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
-set -ex
+trap 'stty sane' SIGINT
+
+dir=$(dirname $(readlink -f $0))
+cd $dir
 
 source /opt/xilinx/xrt/setup.sh > /dev/null
 
@@ -12,3 +15,5 @@ frame_w=416
 frame_h=$((frame_w*height/width))
 
 ./bin/opencv_input $video | ./bin/yolov3_client - $frame_w $frame_h $*
+
+stty sane

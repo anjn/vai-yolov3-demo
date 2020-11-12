@@ -1,4 +1,6 @@
 #include <cstdlib>
+#include <algorithm>
+#include <random>
 #include <iostream>
 #include <stdexcept>
 #include <opencv2/opencv.hpp>
@@ -9,6 +11,7 @@ using namespace cv;
 int main(int argc, char** argv)
 {
   arg_begin("IMG_LIST", 1, 1);
+  arg_b(random_order, true);
   arg_end;
 
   std::vector<std::string> files;
@@ -18,6 +21,12 @@ int main(int argc, char** argv)
     while (std::getline(ifs, line)) {
       files.push_back(line);
     }
+  }
+
+  if (random_order) {
+    std::random_device seed_gen;
+    std::mt19937 engine(seed_gen());
+    std::shuffle(files.begin(), files.end(), engine);
   }
 
   const int out_w = 416;
