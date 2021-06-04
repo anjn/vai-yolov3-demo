@@ -5,7 +5,7 @@
 
 #include "utils/queue_mt.hpp"
 
-#include "/workspace/VART/samples/common/common.h"
+#include "/workspace/demo/VART/common/common.h"
 
 namespace demo {
   

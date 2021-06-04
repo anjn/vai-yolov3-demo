@@ -114,7 +114,6 @@ struct option<std::string> {
   static std::string name() { return "<string>"; }
 };
 
-template<>
 template<typename U>
 struct option<std::vector<U> > {
   static std::vector<U> cast(const std::string& value) {
@@ -124,7 +123,6 @@ struct option<std::vector<U> > {
   static std::string name() { return option<U>::name() + "[," + option<U>::name() + "...]"; }
 };
 
-template<>
 template<typename U, typename V>
 struct option<std::pair<U,V> > {
   static std::pair<U,V> cast(const std::string& value) {

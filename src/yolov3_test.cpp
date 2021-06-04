@@ -15,8 +15,7 @@ int main(int argc, char** argv)
 
   demo::inf_model_config conf;
   conf.name = "yolov3";
-  conf.xmodel = "model/yolov3.xmodel";
-  //conf.xmodel = "model/yolov3_adas_pruned_0_9.xmodel";
+  conf.xmodel = "/usr/share/vitis_ai_library/models/yolov3_voc/yolov3_voc.xmodel";
   conf.num_workers = 1;
 
   demo::inf_request req;

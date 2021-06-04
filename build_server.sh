@@ -81,6 +81,8 @@ CFLAGS="$CFLAGS -Iexternal/arg-master"
 
 CFLAGS="$CFLAGS -O3"
 #CFLAGS="$CFLAGS -g -DDEBUG"
+#CFLAGS="$CFLAGS -fsanitize=address -O1"
+#CFLAGS="$CFLAGS -O1"
 
 programs="inf_server yolov3_test"
 

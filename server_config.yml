@@ -1,12 +1,12 @@
 address: tcp://*:5555
-max_batch_size: 3
+max_batch_size: 1
 max_batch_latency: 80
 
 models:
   yolov3:
-    num_workers: 4
+    num_workers: 1
 
-    xmodel:  model/yolov3.xmodel
+    xmodel: /usr/share/vitis_ai_library/models/yolov3_voc/yolov3_voc.xmodel
 
     input_width: 416
     input_height: 416

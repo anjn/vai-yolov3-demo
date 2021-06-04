@@ -1,30 +1,9 @@
 Overview
 ========
 
-Vitis AI 1.2 YOLOv3 demo app.
+Vitis AI 1.3 YOLOv3 demo app.
 
 ![Screencast](doc/img/demo.gif)
-
-Prepare model
-=============
-
-```bash
-Login to Vitis-AI container
-
-Download YOLOv3 model
-$ wget https://www.xilinx.com/bin/public/openDownload?filename=dk_yolov3_voc_416_416_65.42G_1.2.zip -O dk_yolov3_voc_416_416_65.42G_1.2.zip
-
-Unzip
-$ unzip dk_yolov3_voc_416_416_65.42G_1.2.zip
-$ cd dk_yolov3_voc_416_416_65.42G_1.2/quantized/Cloud
-
-Compile
-$ conda activate vitis-ai-caffe
-$ vai_c_caffe -p deploy.prototxt -c deploy.caffemodel -a /opt/vitis_ai/conda/envs/vitis-ai-caffe/lib/python3.6/site-packages/vaic/arch/DPUCAHX8H/U50/arch.json -o .
-
-Copy xmodel
-$ cp deploy.xmodel /path_to/vai-yolov3-demo/model/yolov3.xmodel
-```
 
 ML server (C++)
 ===============
@@ -47,7 +26,7 @@ YOLOv3 client (C++)
 
 ```bash
 Install required packages
-$ sudo apt install ffmpeg libopencv-dev libglew-dev libglfw3-dev libopenblas-dev libunwind-dev cmake
+$ sudo apt install ffmpeg libopencv-dev libglew-dev libglfw3-dev libopenblas-dev libunwind-dev cmake libxml2-dev
 
 Build client
 $ ./build_client.sh
